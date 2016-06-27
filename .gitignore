@@ -1,0 +1,12 @@
+
+# only c&cpp&h&hpp
+*.*
+!*.c
+!*.cpp
+!*.hpp
+!*.h
+!*.js
+!*.tpl
+!.gitignore
+!*.sln
+!*.vcproj

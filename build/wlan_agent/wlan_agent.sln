@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wlan_agent", "wlan_agent\wlan_agent.vcproj", "{82780D9C-2A10-40A0-AD60-8A7435A88471}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mxwlan", "mxwlan\mxwlan.vcproj", "{8D05D1D9-879F-4BB5-9907-133F16C62E23}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|HSW_T9_SDK (ARMv4I) = Debug|HSW_T9_SDK (ARMv4I)
+		Release|HSW_T9_SDK (ARMv4I) = Release|HSW_T9_SDK (ARMv4I)
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{82780D9C-2A10-40A0-AD60-8A7435A88471}.Debug|HSW_T9_SDK (ARMv4I).ActiveCfg = Debug|HSW_T9_SDK (ARMv4I)
+		{82780D9C-2A10-40A0-AD60-8A7435A88471}.Debug|HSW_T9_SDK (ARMv4I).Build.0 = Debug|HSW_T9_SDK (ARMv4I)
+		{82780D9C-2A10-40A0-AD60-8A7435A88471}.Debug|HSW_T9_SDK (ARMv4I).Deploy.0 = Debug|HSW_T9_SDK (ARMv4I)
+		{82780D9C-2A10-40A0-AD60-8A7435A88471}.Release|HSW_T9_SDK (ARMv4I).ActiveCfg = Release|HSW_T9_SDK (ARMv4I)
+		{82780D9C-2A10-40A0-AD60-8A7435A88471}.Release|HSW_T9_SDK (ARMv4I).Build.0 = Release|HSW_T9_SDK (ARMv4I)
+		{82780D9C-2A10-40A0-AD60-8A7435A88471}.Release|HSW_T9_SDK (ARMv4I).Deploy.0 = Release|HSW_T9_SDK (ARMv4I)
+		{8D05D1D9-879F-4BB5-9907-133F16C62E23}.Debug|HSW_T9_SDK (ARMv4I).ActiveCfg = Debug|HSW_T9_SDK (ARMv4I)
+		{8D05D1D9-879F-4BB5-9907-133F16C62E23}.Debug|HSW_T9_SDK (ARMv4I).Build.0 = Debug|HSW_T9_SDK (ARMv4I)
+		{8D05D1D9-879F-4BB5-9907-133F16C62E23}.Debug|HSW_T9_SDK (ARMv4I).Deploy.0 = Debug|HSW_T9_SDK (ARMv4I)
+		{8D05D1D9-879F-4BB5-9907-133F16C62E23}.Release|HSW_T9_SDK (ARMv4I).ActiveCfg = Release|HSW_T9_SDK (ARMv4I)
+		{8D05D1D9-879F-4BB5-9907-133F16C62E23}.Release|HSW_T9_SDK (ARMv4I).Build.0 = Release|HSW_T9_SDK (ARMv4I)
+		{8D05D1D9-879F-4BB5-9907-133F16C62E23}.Release|HSW_T9_SDK (ARMv4I).Deploy.0 = Release|HSW_T9_SDK (ARMv4I)
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
