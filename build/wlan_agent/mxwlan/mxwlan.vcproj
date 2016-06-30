@@ -66,6 +66,7 @@
 				AdditionalOptions=" /subsystem:windowsce,7.00"
 				OutputFile="$(OutDir)/mxwlan.dll"
 				LinkIncremental="2"
+				ModuleDefinitionFile="$(SolutionDir)\..\..\src\export.def"
 				DelayLoadDLLs="$(NOINHERIT)"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/mxwlan.pdb"
@@ -96,7 +97,7 @@
 			/>
 			<DeploymentTool
 				ForceDirty="-1"
-				RemoteDirectory=""
+				RemoteDirectory="\nand\t9"
 				RegisterOutput="0"
 				AdditionalFiles=""
 			/>

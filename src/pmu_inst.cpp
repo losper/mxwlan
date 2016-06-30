@@ -1,5 +1,5 @@
 #include "windows.h"
-//#include "wifiwork.hpp"
+#include "wifiwork.hpp"
 HINSTANCE			g_hPMUInst;			// current instance
 ATOM			MyPMURegisterClass(HINSTANCE, LPTSTR);
 BOOL			InitPMUInstance(HINSTANCE, int);
@@ -53,6 +53,7 @@ BOOL InitPMUInstance(HINSTANCE hInstance, int nCmdShow)
 	_tcscpy(szWindowClass,L"ra_agent");
 	_tcscpy(szTitle,L"ra_agent");
 
+	wifihelper::get_inst().disconnect();
 	if (!MyPMURegisterClass(hInstance, szWindowClass))
 	{
 		return FALSE;

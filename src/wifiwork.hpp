@@ -100,23 +100,43 @@ public:
 		return inst;
 	}
 	void scan(){
-		mxwScan();
+		if (mxwScan)
+		{
+			mxwScan();
+		}
 	}
 	
 	void disconnect(){
-		mxwDisconnect();
+		if (mxwDisconnect)
+		{
+			mxwDisconnect()
+		}
 	}
 	int getWnetwork(tag_NetWork &tag,DWORD idx){
-		return mxwGetWnetwork(tag,idx);
+		if(mxwGetWnetwork){
+			return mxwGetWnetwork(tag,idx);
+		}
+		return 0;
 	}
 	int getWlistSize(){
-		return mxwGetListSize();
+		if (mxwGetListSize){
+			return mxwGetListSize();
+		}
+		return 0;
 	}
 	tag_NetWork& getCurNetwork(){
-		return mxwGetCurNetwork();
+		static tag_NetWork tag;
+		if (mxwGetCurNetwork){
+			return mxwGetCurNetwork();
+		} 
+		tag.bConnected=0;
+		return tag;
 	}
 	int connect(LPTSTR ssid,LPTSTR password){
-		return mxwConnect(ssid,password);	
+		if (mxwConnect){
+			return mxwConnect(ssid,password);
+		} 
+		return 0;	
 	}
 private:	
 	~xwifi(){

@@ -95,7 +95,7 @@
 			/>
 			<DeploymentTool
 				ForceDirty="-1"
-				RemoteDirectory="/nand/t9"
+				RemoteDirectory="\nand\t9"
 				RegisterOutput="0"
 				AdditionalFiles=""
 			/>

@@ -276,7 +276,7 @@ private:
 								PostMessage(hwnd_main_process,RegisterWindowMessage(_T("WIFI_STATUS_NOTIFY_NAVI")),FALSE,NULL); 
 							}*/
 							
-							return result;
+							//return result;
 						}
 					}
 				}
