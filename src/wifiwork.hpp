@@ -109,7 +109,7 @@ public:
 	void disconnect(){
 		if (mxwDisconnect)
 		{
-			mxwDisconnect()
+			mxwDisconnect();
 		}
 	}
 	int getWnetwork(tag_NetWork &tag,DWORD idx){

@@ -129,10 +129,14 @@ private:
 				printf("WLAN_AVAILABLE_NETWORK_LIST for this interface\r\n");  
 				printf("Num Entries: %d\r\n", pBssList->dwNumberOfItems);
 				listsize=0;
+				if (pBssList->dwNumberOfItems>30)
+				{
+					pBssList->dwNumberOfItems=30;
+				}
 				for (DWORD j = 0; j < pBssList->dwNumberOfItems; j++)   
 				{  
 					pBssEntry = (WLAN_AVAILABLE_NETWORK *)&pBssList->Network[j];  
-					if(IsExist((LPSTR)(pBssEntry->dot11Ssid.ucSSID))){
+					if(!pBssEntry->dot11Ssid.uSSIDLength || IsExist((LPSTR)(pBssEntry->dot11Ssid.ucSSID))){
 						continue;
 					}
 					/*int iUniTest ;
@@ -151,7 +155,8 @@ private:
 						wlist[listsize].bConnected=1;
 						curNetwork=wlist[listsize];
 						HWND hwnd_main_process = ::FindWindow(NULL,_T("Front_main_menu_UI"));
-						PostMessage(hwnd_main_process,RegisterWindowMessage(_T("WIFI_STATUS_NOTIFY_NAVI")),TRUE,curNetwork.ulSingleQuality);  
+						PostMessage(hwnd_main_process,RegisterWindowMessage(_T("WIFI_STATUS_NOTIFY_NAVI")),TRUE,curNetwork.ulSingleQuality); 
+
 					}else{
 						wlist[listsize].bConnected=0;
 					}
@@ -181,6 +186,7 @@ private:
 		ResetEvent(hpost);
 		EnterCriticalSection(&cs);
 		ret=(!_tcscmp(ssid,ucSSID))&&(!_tcscmp(pwd,KeyMaterial))&&flag;
+
 		_tcscpy_s(ssid,DOT11_SSID_MAX_LENGTH,ucSSID);
 		_tcscpy_s(pwd,NWCTL_MAX_WEPK_MATERIAL,KeyMaterial);
 		LeaveCriticalSection(&cs);
@@ -190,18 +196,9 @@ private:
 			{
 				if (!_tcscmp(wlist[idx].ucSSID,ssid))
 				{
-					/*if (!wlist[idx].bConnected)*/
-					{
-						wprintf(L"[wifi] start connect %s!!!\r\n",ssid);
-						connect(&wlist[idx].config,wlist[idx].ucSSID,pwd); 
-					}/*else{
-						wprintf(L"[wifi] %s already connected!!!\r\n",ssid);
-						HWND hwnd_setting = FindWindow(NULL,_T("Front_Setting_UI"));
-						HWND hwnd_main_process = ::FindWindow(NULL,_T("Front_main_menu_UI"));
-						PostMessage(hwnd_setting,WM_WIFI_UI_OPERATOR_RESULT,EN_ACTION_CONN_NETWORK,EN_WIFI_CONN_RESULT_SUCCESS);
-						PostMessage(hwnd_main_process,RegisterWindowMessage(_T("WIFI_STATUS_NOTIFY_NAVI")),TRUE,curNetwork.ulSingleQuality); 
-					}*/
-
+					
+					wprintf(L"[wifi] start connect %s!!!\r\n",ssid);
+					connect(&wlist[idx].config,wlist[idx].ucSSID,pwd); 
 					break;
 				}
 			}
@@ -225,34 +222,38 @@ private:
 		DWORD cbNameSize = WLAN_MAX_NAME_LENGTH;
 		DWORD cbConfigSize = 10,dwError;
 		BSTR bstrXml=NULL;
-		_tcscpy_s(pWiFiConfig->KeyMaterial,NWCTL_MAX_WEPK_MATERIAL,password);
-
+		
 		dwError = WlanSsidToDisplayName(&pWiFiConfig->Ssid, szConnectionName, &cbNameSize);
 		BAIL_ON_WIN32_ERROR(dwError);
 
 		//CmDeleteConnectionConfig()
-		if (_tcslen(pWiFiConfig->KeyMaterial)>7)
-		{
-			pWiFiConfig->dwCtlFlags |= (NWCTL_BROADCAST_SSID|NWCTL_WEPK_PASSPHRASE);
-		}else{
-			pWiFiConfig->dwCtlFlags |= (NWCTL_BROADCAST_SSID);
-		}
 
-		dwError=SyncProfile(pWiFiConfig, TRUE/*updateXmlDirection*/, &bstrXml);
-		BAIL_ON_WIN32_ERROR(dwError);
+		/*if (_tcscmp(pWiFiConfig->KeyMaterial,password))
+		{*/
+			_tcscpy_s(pWiFiConfig->KeyMaterial,NWCTL_MAX_WEPK_MATERIAL,password);
+			if (_tcslen(pWiFiConfig->KeyMaterial)>7)
+			{
+				pWiFiConfig->dwCtlFlags |= (NWCTL_BROADCAST_SSID|NWCTL_WEPK_PASSPHRASE);
+			}else{
+				pWiFiConfig->dwCtlFlags |= (NWCTL_BROADCAST_SSID);
+			}
 
-		disconnect();
-		disconnect(szConnectionName);
+			dwError=SyncProfile(pWiFiConfig, TRUE/*updateXmlDirection*/, &bstrXml);
+			BAIL_ON_WIN32_ERROR(dwError);
 
-		CreateConnectionConfigFromXml(szConnectionName,bstrXml,&g_guid,&pConfig,&cbConfigSize);
+			disconnect();
+			disconnect(szConnectionName);
 
-		if (pConfig) {      
-			result = CmAddConnectionConfig(szConnectionName,pConfig,cbConfigSize);
-			LocalFree(pConfig);
-		}
+			CreateConnectionConfigFromXml(szConnectionName,bstrXml,&g_guid,&pConfig,&cbConfigSize);
 
-		Sleep(5000);
+			if (pConfig) {      
+				result = CmAddConnectionConfig(szConnectionName,pConfig,cbConfigSize);
+				LocalFree(pConfig);
+			}
 
+			//Sleep(5000);
+		//}
+		
 		for (result = CmGetFirstCandidateConnection(myhandle, NULL, CMSO_DEFAULT, &hConnection);result==CMRE_SUCCESS;
 			result = CmGetNextCandidateConnection(myhandle, &hConnection)) {
 				DWORD dwError = GetConnectionDetailsByHandle(hConnection, &pDetails);
@@ -260,28 +261,11 @@ private:
 					if (memcmp(&pDetails->Type, &CM_CSP_WIFI_TYPE, sizeof(CM_CONNECTION_TYPE)) == 0) {
 						if (wcscmp(pDetails->szName,szConnectionName) == 0) {
 							result = CmAcquireConnection(hConnection);
-							/*HWND hwnd_setting = FindWindow(NULL,_T("Front_Setting_UI"));
-							HWND hwnd_main_process = ::FindWindow(NULL,_T("Front_main_menu_UI"));
-
-							if (CMRE_SUCCESS == result)
-							{
-								mxwifi<void>::get_inst().setCurNetwork(ssid);
-								PostThreadMessage(g_itrd,WM_USER+2,0,1);
-								PostMessage(hwnd_setting,WM_WIFI_UI_OPERATOR_RESULT,EN_ACTION_CONN_NETWORK,EN_WIFI_CONN_RESULT_SUCCESS);
-								PostMessage(hwnd_main_process,RegisterWindowMessage(_T("WIFI_STATUS_NOTIFY_NAVI")),TRUE,curNetwork.ulSingleQuality);  
-							}
-							else
-							{
-								PostMessage(hwnd_setting,WM_WIFI_UI_OPERATOR_RESULT,EN_ACTION_CONN_NETWORK,EN_WIFI_CONN_RESULT_PASSWORD_ERROR);					
-								PostMessage(hwnd_main_process,RegisterWindowMessage(_T("WIFI_STATUS_NOTIFY_NAVI")),FALSE,NULL); 
-							}*/
-							
-							//return result;
 						}
 					}
 				}
 		}
-
+		mxwifi<void>::get_inst().notify(2);
 exit:
 		printf("[wifi] connect over!!!\r\n");
 		CmCloseSession(myhandle);
@@ -367,9 +351,13 @@ exit:
 			}
 		}
 	}
+	int getStatus(){
+		return status;
+	}
 	static void TimerCallBack(UINT uTimerID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2){
-		if (!mxwifi<void>::get_inst().getCurNetwork().bConnected)
+		if (!mxwifi<void>::get_inst().getStatus())
 		{
+			printf("mxwifi<void>::get_inst().getStatus():%d\r\n",mxwifi<void>::get_inst().getStatus());
 			HWND hwnd_setting = FindWindow(NULL,_T("Front_Setting_UI"));
 			HWND hwnd_main_process = ::FindWindow(NULL,_T("Front_main_menu_UI")); 
 			PostMessage(hwnd_setting,WM_WIFI_UI_OPERATOR_RESULT,EN_ACTION_CONN_NETWORK,EN_WIFI_CONN_RESULT_PASSWORD_ERROR);					
@@ -377,13 +365,34 @@ exit:
 		}
 	}
 	void notify(int flag){
-		if (flag)
-		{
-			timeKillEvent(g_timer);
-			g_timer=timeSetEvent(10000,1,TimerCallBack,0,TIME_ONESHOT|TIME_CALLBACK_FUNCTION);
-		}else{
-			timeKillEvent(g_timer);
+		static int cls=0;
+		switch(flag){
+			case 0:
+				status=1;
+				cls=0;
+				timeKillEvent(g_timer);
+				break;
+			case 1:
+				status=0;
+				cls++;
+				timeKillEvent(g_timer);
+				if (cls<3)
+				{
+					g_timer=timeSetEvent(10000,1,TimerCallBack,0,TIME_ONESHOT|TIME_CALLBACK_FUNCTION);
+				}else{
+					TimerCallBack(NULL,NULL,NULL,NULL,NULL);
+				}
+				break;
+			case 2:
+				cls=0;
+				timeKillEvent(g_timer);
+				g_timer=timeSetEvent(10000,1,TimerCallBack,0,TIME_ONESHOT|TIME_CALLBACK_FUNCTION);
+				break;
+			default:
+				status=0;
+				break;
 		}
+		printf("mxwifi<void>::get_inst().getStatus():%d-%d\r\n",flag,mxwifi<void>::get_inst().getStatus());
 		
 	}
 	static void WINAPI NotificationCallBack(PWLAN_NOTIFICATION_DATA pNotifData, PVOID pContent){
@@ -427,16 +436,12 @@ exit:
 						break;
 					}
 				case wlan_notification_acm_scan_complete:
-					{
-						/*HWND hwnd_setting = FindWindow(NULL,_T("Front_Setting_UI"));
-						PostMessage(hwnd_setting,WM_WIFI_UI_OPERATOR_RESULT,EN_ACTION_SCAN_AVALIABLE_NETWORK,EN_WIFI_CONN_RESULT_SUCCESS);	*/				
+					{		
 						//…®√ËÕÍ≥…
 						break;
 					}
 				case wlan_notification_acm_scan_fail:					 //8
 					{
-						/*HWND hwnd_setting = FindWindow(NULL,_T("Front_Setting_UI"));
-						PostMessage(hwnd_setting,WM_WIFI_UI_OPERATOR_RESULT,EN_ACTION_SCAN_AVALIABLE_NETWORK,EN_WIFI_CONN_RESULT_TIMEOUT);*/
 						//…®√Ë ß∞‹
 						break;
 					}
@@ -464,16 +469,12 @@ exit:
 						else
 						{
 							mxwifi<void>::get_inst().notify(1);
-							/*PostMessage(hwnd_setting,WM_WIFI_UI_OPERATOR_RESULT,EN_ACTION_CONN_NETWORK,EN_WIFI_CONN_RESULT_PASSWORD_ERROR);					
-							PostMessage(hwnd_main_process,RegisterWindowMessage(_T("WIFI_STATUS_NOTIFY_NAVI")),FALSE,NULL); */
 						}
 						
 						break;
 					}
 				case wlan_notification_acm_connection_attempt_fail:	 //11
 					{
-						/*HWND	hwnd_setting = FindWindow(NULL,_T("Front_Setting_UI"));
-						PostMessage(hwnd_setting,WM_WIFI_UI_OPERATOR_RESULT,EN_ACTION_CONN_NETWORK,EN_WIFI_CONN_RESULT_PASSWORD_ERROR);		*/
 						break;
 					}
 				case wlan_notification_acm_filter_list_change:	  //12
@@ -504,13 +505,11 @@ exit:
 					}
 				case wlan_notification_acm_network_not_available:
 					{
-						RETAILMSG(1, (_T("[WIFI]scan network not available!\n")));
 						break;
 					}
 				case wlan_notification_acm_network_available: //19
 					{
 						
-						RETAILMSG(1, (_T("[WIFI]scan network available!\n")))	;
 						break;
 					}
 				case wlan_notification_acm_disconnecting:
@@ -519,6 +518,7 @@ exit:
 					}
 				case wlan_notification_acm_disconnected:
 					{
+						mxwifi<void>::get_inst().notify(-1);
 						pConectNotifData = (PWLAN_CONNECTION_NOTIFICATION_DATA)pNotifData->pData;
 						xwifi<void>::get_inst().getCurNetwork().bConnected=0;
 						HWND hwnd_setting = ::FindWindow(NULL,_T("Front_Setting_UI"));
@@ -561,6 +561,7 @@ exit:
 		DWORD dwResult = WlanOpenHandle(dwMaxClient, NULL, &dwCurVersion, &hClient);
 		register_wlan();
 		CloseHandle(CreateThread(NULL,NULL,wifiproc,NULL,NULL,&g_itrd));
+		status=0;
 	}
 	~mxwifi(){
 		PostThreadMessage(g_itrd,WM_QUIT,0,0);
@@ -577,6 +578,7 @@ private:
 	WCHAR   KeyMaterial[NWCTL_MAX_WEPK_MATERIAL+1];
 	CRITICAL_SECTION cs;
 	HANDLE hpost;
+	BYTE status;
 };
 
 int mxwConnect(LPTSTR ssid,LPTSTR pwd){
