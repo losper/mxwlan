@@ -279,6 +279,12 @@ DWORD DeleteConnection(const WCHAR *szName)
     if (szName == NULL)
         return ERROR_INVALID_PARAMETER;
 
+	/*DWORD listsize=0,cbConfig=0;
+	if (CmResult=CmGetConnectionConfig(szName,pConfig,&cbConfig))
+	{
+		printf("%d\\%d",listsize,cbConfig);
+	}*/
+
     CmResult = CmDeleteConnectionConfig(szName);
     if (CMRE_SUCCESS != CmResult)
         dwError = ERROR_INVALID_PARAMETER;
@@ -316,4 +322,45 @@ int ssid_2_connect_string(const char* src,LPTSTR dst,int dstlen){
 		}
 		return 0;
 	}
+}
+
+DWORD DeleteAllConnectionConfigs(LPTSTR name)
+{
+	CM_CONNECTION_NAME_LIST* pCmConnections;
+	DWORD dwError = ERROR_SUCCESS;
+	CM_RESULT result = CMRE_INSUFFICIENT_BUFFER;
+	DWORD dwSize = sizeof(CM_CONNECTION_NAME_LIST) * DEFAULT_CONNECTION_CONFIG_COUNT;
+	UINT i;
+
+	for (i = 0; i < MAX_TRY_COUNT_FOR_INSUFFICIENT_BUFFER && result == CMRE_INSUFFICIENT_BUFFER; i++)
+	{
+		if (pCmConnections)
+		{
+			LocalFree(pCmConnections);
+			pCmConnections = NULL;
+		}
+
+		pCmConnections = (CM_CONNECTION_NAME_LIST*)LocalAlloc(0, dwSize);
+		result = CmEnumConnectionsConfigByType(CM_CSP_WIFI_TYPE, pCmConnections, &dwSize);
+	}
+	if (result != CMRE_SUCCESS)
+	{
+		dwError = GetLastError();
+		printf("!NWUI: RefreshConnectionConfigs failed 0x%X\r\n",dwError);
+	}else{
+		for (i=0;i<pCmConnections->cConnection;i++)
+		{
+			if (name)
+			{
+				if (!_tcscmp(name,pCmConnections->Connection[i].szName))
+				{
+					CmDeleteConnectionConfig(pCmConnections->Connection[i].szName);
+					break;
+				}
+			}else{
+				CmDeleteConnectionConfig(pCmConnections->Connection[i].szName);
+			}
+		}
+	}
+	return dwError;
 }

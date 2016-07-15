@@ -7,6 +7,8 @@
 #include "xstream.hpp"
 #include "nwprofilehelper.h"
 #include <mmsystem.h>
+#include "quicksort.hpp"
+#include "cmcsp.h"
 
 #pragma comment(lib, "Mmtimer.lib")
 #pragma comment(lib, "wlanapi.lib")
@@ -20,8 +22,11 @@ public:
 		return inst;
 	}
 	int disconnect(){
+		
 		WCHAR szConnectionName[WLAN_MAX_NAME_LENGTH];
 		MultiToUnicode((const char*)curNetwork.config.Ssid.ucSSID,CP_ACP,szConnectionName,WLAN_MAX_NAME_LENGTH);
+		DeleteAllConnectionConfigs(szConnectionName);
+		/*
 		if (ERROR_SUCCESS==DeleteConnection(szConnectionName))
 		{
 			MultiToUnicode((const char*)curNetwork.config.Ssid.ucSSID,65001,szConnectionName,WLAN_MAX_NAME_LENGTH);
@@ -34,10 +39,10 @@ public:
 			}
 			curNetwork.bConnected=0;
 			return 0;
-		}
+		}*/
 		return -1;
 	}
-	int disconnect(LPCTSTR szConnectionName){
+	/*int disconnect(LPCTSTR szConnectionName){
 		if (ERROR_SUCCESS==DeleteConnection(szConnectionName))
 		{
 			for (DWORD i=0;i<listsize;i++)
@@ -51,7 +56,7 @@ public:
 		}
 		return -1;
 		
-	}
+	}*/
 	int scan(){
 		return PostThreadMessage(g_itrd,WM_USER+1,NULL,NULL);
 	}
@@ -94,6 +99,90 @@ public:
 	}
 	
 private:
+	static int compare(WLAN_AVAILABLE_NETWORK& arg1,WLAN_AVAILABLE_NETWORK& arg2){
+		return arg1.wlanSignalQuality>arg2.wlanSignalQuality;
+	}
+	int findConfig(LPTSTR szConnectName){
+		CM_CONNECTION_NAME_LIST* pCmConnections;
+		DWORD dwError = -1;
+		CM_RESULT result = CMRE_INSUFFICIENT_BUFFER;
+		DWORD dwSize = sizeof(CM_CONNECTION_NAME_LIST) * DEFAULT_CONNECTION_CONFIG_COUNT;
+		UINT i;
+
+		for (i = 0; i < MAX_TRY_COUNT_FOR_INSUFFICIENT_BUFFER && result == CMRE_INSUFFICIENT_BUFFER; i++)
+		{
+			pCmConnections = (CM_CONNECTION_NAME_LIST*)LocalAlloc(0, dwSize);
+			result = CmEnumConnectionsConfigByType(CM_CSP_WIFI_TYPE, pCmConnections, &dwSize);
+		}
+		if (result != CMRE_SUCCESS)
+		{
+			dwError = -1;
+			printf("[mxwlan]: findConfig failed 0x%X\r\n",GetLastError());
+		}else{
+			for (i=0;i<pCmConnections->cConnection;i++)
+			{
+				if (!_tcscmp(szConnectName,pCmConnections->Connection[i].szName))
+				{
+					dwError=0;
+				}
+			}
+		}
+		if (pCmConnections)
+		{
+			LocalFree(pCmConnections);
+		}
+		return dwError;
+	}
+	DWORD updateConfig(LPTSTR szConnectionName,CM_CONNECTION_CONFIG* pConfig,DWORD cbConfig)
+	{
+		DWORD dwError = ERROR_SUCCESS;
+		CM_RESULT result;
+		int fAdd=findConfig(szConnectionName);
+		if (fAdd)
+		{
+			result = CmAddConnectionConfig(szConnectionName, pConfig, cbConfig);
+		}
+		else
+		{
+			CM_CONFIG_CHANGE_HANDLE pUpdateHandle = NULL;
+			CM_CONNECTION_CONFIG* pOldConfig = NULL;
+			DWORD cbOldSize = 255;
+			UINT i;
+			for (i = 0, result = CMRE_INSUFFICIENT_BUFFER; i < MAX_TRY_COUNT_FOR_INSUFFICIENT_BUFFER && result == CMRE_INSUFFICIENT_BUFFER; i++)
+			{
+				LocalFree(pOldConfig);
+
+				pOldConfig = (CM_CONNECTION_CONFIG*)LocalAlloc(0, cbOldSize);
+				if (!pOldConfig)
+				{
+					dwError = GetLastError();
+					BAIL_ON_WIN32_ERROR(dwError);
+				}
+
+				result = CmGetToUpdateConnectionConfig(szConnectionName, pOldConfig, &cbOldSize, &pUpdateHandle);
+			}
+
+			// We don't care about old config, just free it.
+			LocalFree(pOldConfig);
+
+			if (result != CMRE_SUCCESS)
+			{
+				dwError = GetLastError();
+				BAIL_ON_WIN32_ERROR(dwError);
+			}
+
+			result = CmUpdateConnectionConfig(pUpdateHandle, CMCO_IMMEDIATE_APPLY, pConfig, cbConfig);
+		}
+
+		if (result != CMRE_SUCCESS)
+		{
+			dwError = GetLastError();
+			BAIL_ON_WIN32_ERROR(dwError);
+		}
+exit:
+		return dwError;
+	}
+
 	void scanlist(){
 		int iRet=0,iRSSI=0;
 		DWORD dwResult=0;
@@ -103,6 +192,7 @@ private:
 		PWLAN_AVAILABLE_NETWORK_LIST pBssList = NULL;  
 		PWLAN_AVAILABLE_NETWORK pBssEntry = NULL;  
 		WCHAR GuidString[39] = {0}; 
+		
 		
 		dwResult = WlanEnumInterfaces(hClient, NULL, &pIfList); 
 		printf("scaning\r\n");
@@ -129,6 +219,7 @@ private:
 				printf("WLAN_AVAILABLE_NETWORK_LIST for this interface\r\n");  
 				printf("Num Entries: %d\r\n", pBssList->dwNumberOfItems);
 				listsize=0;
+				dpz::sort(pBssList->Network,0,pBssList->dwNumberOfItems,compare);
 				if (pBssList->dwNumberOfItems>30)
 				{
 					pBssList->dwNumberOfItems=30;
@@ -150,7 +241,7 @@ private:
 					wlist[listsize].ulSingleQuality = pBssEntry->wlanSignalQuality;
 					wlist[listsize].bSecurityEnabled = pBssEntry->bSecurityEnabled;
 					wlist[listsize].uSSIDLength=pBssEntry->dot11Ssid.uSSIDLength;
-					wlist[listsize].nIndex=listsize;  
+					wlist[listsize].nIndex=listsize;
 					if (pBssEntry->dwFlags & WLAN_AVAILABLE_NETWORK_CONNECTED){
 						wlist[listsize].bConnected=1;
 						curNetwork=wlist[listsize];
@@ -210,10 +301,26 @@ private:
 		SetEvent(hpost);
 		return 0;
 	}
+	CM_RESULT AcquireConnection(CM_CONNECTION_HANDLE hConnection){
+		CM_CONNECTION_CONFIG* pConfigTmp=NULL;
+		DWORD cbConfigTmp=0;
+		WCHAR szConnectionName[WLAN_MAX_NAME_LENGTH];
+		CM_RESULT result=CMRE_SUCCESS;
+		MultiToUnicode((const char*)curNetwork.config.Ssid.ucSSID,CP_ACP,szConnectionName,WLAN_MAX_NAME_LENGTH);
 
+		//AllocAndGetConnectionConfig(szConnectionName,&pConfigTmp,&cbConfigTmp);
+		DeleteAllConnectionConfigs(NULL);
+		result = CmAcquireConnection(hConnection);
+		/*if (pConfigTmp)
+		{
+			CmAddConnectionConfig(szConnectionName,pConfigTmp,cbConfigTmp);
+			LocalFree(pConfigTmp);
+		}*/
+		return result;
+	}
 	int connect(PNW_WLAN_CONFIG pWiFiConfig,LPCTSTR ssid,LPCTSTR password){
 		CM_CONNECTION_DETAILS *pDetails = NULL;
-		CM_SESSION_HANDLE myhandle = CmCreateSession(); 
+		
 		CM_CONNECTION_HANDLE hConnection = NULL;
 		CM_RESULT result;
 		CM_CONNECTION_CONFIG* pConfig = NULL;
@@ -226,7 +333,6 @@ private:
 		dwError = WlanSsidToDisplayName(&pWiFiConfig->Ssid, szConnectionName, &cbNameSize);
 		BAIL_ON_WIN32_ERROR(dwError);
 
-		//CmDeleteConnectionConfig()
 
 		/*if (_tcscmp(pWiFiConfig->KeyMaterial,password))
 		{*/
@@ -241,13 +347,16 @@ private:
 			dwError=SyncProfile(pWiFiConfig, TRUE/*updateXmlDirection*/, &bstrXml);
 			BAIL_ON_WIN32_ERROR(dwError);
 
-			disconnect();
-			disconnect(szConnectionName);
+			//disconnect();
+			//disconnect(szConnectionName);
+			//DeleteAllConnectionConfigs(szConnectionName);
 
 			CreateConnectionConfigFromXml(szConnectionName,bstrXml,&g_guid,&pConfig,&cbConfigSize);
 
-			if (pConfig) {      
-				result = CmAddConnectionConfig(szConnectionName,pConfig,cbConfigSize);
+			if (pConfig) {
+				
+				/*result = CmAddConnectionConfig(szConnectionName,pConfig,cbConfigSize);*/
+				updateConfig(szConnectionName,pConfig,cbConfigSize);
 				LocalFree(pConfig);
 			}
 
@@ -260,7 +369,7 @@ private:
 				if (dwError==0) {
 					if (memcmp(&pDetails->Type, &CM_CSP_WIFI_TYPE, sizeof(CM_CONNECTION_TYPE)) == 0) {
 						if (wcscmp(pDetails->szName,szConnectionName) == 0) {
-							result = CmAcquireConnection(hConnection);
+							AcquireConnection(hConnection);
 						}
 					}
 				}
@@ -268,7 +377,7 @@ private:
 		mxwifi<void>::get_inst().notify(2);
 exit:
 		printf("[wifi] connect over!!!\r\n");
-		CmCloseSession(myhandle);
+		
 		return -1;
 	}
 
@@ -278,6 +387,7 @@ exit:
 		DWORD timescan=0,timenow=0/*,timeconnect=0*/;
 		/*int bConnect=0;*/
 		CoInitialize(NULL);
+		DeleteAllConnectionConfigs(NULL);
 		while (bexit)
 		{
 			PeekMessage(&msg,NULL,NULL,NULL,PM_REMOVE);
@@ -355,7 +465,7 @@ exit:
 		return status;
 	}
 	static void TimerCallBack(UINT uTimerID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2){
-		if (!mxwifi<void>::get_inst().getStatus())
+		if (!mxwifi<void>::get_inst().getStatus() || _tcscmp(mxwifi<void>::get_inst().ucSSID,mxwifi<void>::get_inst().curNetwork.ucSSID))
 		{
 			printf("mxwifi<void>::get_inst().getStatus():%d\r\n",mxwifi<void>::get_inst().getStatus());
 			HWND hwnd_setting = FindWindow(NULL,_T("Front_Setting_UI"));
@@ -460,7 +570,7 @@ exit:
 							HWND hwnd_main_process = ::FindWindow(NULL,_T("Front_main_menu_UI")); 
 
 							TCHAR buf[200];
-							::MultiToUnicode((const char*)(pConectNotifData->dot11Ssid.ucSSID),65001,buf,200);
+							MultiToUnicode((const char*)(pConectNotifData->dot11Ssid.ucSSID),65001,buf,200);
 							mxwifi<void>::get_inst().setCurNetwork(buf);
 							PostThreadMessage(mxwifi<void>::get_inst().g_itrd,WM_USER+2,0,1);
 							PostMessage(hwnd_setting,WM_WIFI_UI_OPERATOR_RESULT,EN_ACTION_CONN_NETWORK,EN_WIFI_CONN_RESULT_SUCCESS);
@@ -555,6 +665,7 @@ exit:
 	mxwifi(){
 		//CoInitialize(NULL, COINIT_MULTITHREADED);
 		InitializeCriticalSection(&cs);
+		myhandle = CmCreateSession(); 
 		hpost=CreateEvent(NULL,FALSE,TRUE,NULL);
 		InitProfileHelper();
 		DWORD dwMaxClient=2,dwCurVersion=0;
@@ -565,6 +676,7 @@ exit:
 	}
 	~mxwifi(){
 		PostThreadMessage(g_itrd,WM_QUIT,0,0);
+		CmCloseSession(myhandle);
 	}
 private:
 	HANDLE hClient;
@@ -578,6 +690,7 @@ private:
 	WCHAR   KeyMaterial[NWCTL_MAX_WEPK_MATERIAL+1];
 	CRITICAL_SECTION cs;
 	HANDLE hpost;
+	CM_SESSION_HANDLE myhandle;
 	BYTE status;
 };
 

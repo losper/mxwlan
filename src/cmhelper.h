@@ -43,6 +43,7 @@ extern "C"
 {
 #endif
 #define MAX_TRY_COUNT_FOR_INSUFFICIENT_BUFFER       5
+#define DEFAULT_CONNECTION_CONFIG_COUNT				5
 #define WIN32_FROM_HRESULT(hr)           \
 	(SUCCEEDED(hr) ? ERROR_SUCCESS :    \
 	(HRESULT_FACILITY(hr) == FACILITY_WIN32 ? HRESULT_CODE(hr) : (hr)))
@@ -84,6 +85,7 @@ AllocAndGetXmlFromConnectionConfig(
 int MultiToUnicode(const char* str,unsigned int code,wchar_t* result,unsigned int len);
 int UnicodeToMulti(wchar_t* str,unsigned int code,char* result,unsigned int len);
 int ssid_2_connect_string(const char* src,LPTSTR dst,int dstlen);
+DWORD DeleteAllConnectionConfigs(LPTSTR name);
 #ifdef __cplusplus
 }
 #endif
