@@ -916,12 +916,12 @@ DWORD SyncXmlNode(PNW_WLAN_CONFIG pConfig, BOOL fUpdateXmlDirection, IXMLDOMNode
 		}
 		if (fUpdateXmlDirection)
 		{
-			WCHAR szSsidName[DOT11_SSID_MAX_LENGTH*2+2];
+			WCHAR szSsidName[DOT11_SSID_MAX_LENGTH+1];
 			/*char szSid2[DOT11_SSID_MAX_LENGTH+1];
 			for(int i=0;i<pConfig->Ssid.uSSIDLength;i++){
 				szSid2[i]=ConvertIntegerToHexWChar(pConfig->Ssid.ucSSID[i]);
 			}*/
-			ConvertBufferToBinHex(pConfig->Ssid.ucSSID,pConfig->Ssid.uSSIDLength,szSsidName,DOT11_SSID_MAX_LENGTH*2);
+			ConvertBufferToBinHex(pConfig->Ssid.ucSSID,pConfig->Ssid.uSSIDLength,szSsidName,DOT11_SSID_MAX_LENGTH*2+2);
 			bstrInnerText = SysAllocString(szSsidName);
 			if (!bstrInnerText)
 			{

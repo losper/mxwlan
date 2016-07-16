@@ -62,7 +62,7 @@ public:
 	}
 	int connect(LPTSTR ssid,LPTSTR pwd){
 		EnterCriticalSection(&cs);
-		_tcscpy_s(ucSSID,DOT11_SSID_MAX_LENGTH,ssid);
+		_tcscpy_s(ucSSID,DOT11_SSID_MAX_LENGTH+1,ssid);
 		_tcscpy_s(KeyMaterial,NWCTL_MAX_WEPK_MATERIAL,pwd);
 		LeaveCriticalSection(&cs);
 		if (WAIT_OBJECT_0==WaitForSingleObject(hpost,0))
@@ -278,7 +278,7 @@ exit:
 		EnterCriticalSection(&cs);
 		ret=(!_tcscmp(ssid,ucSSID))&&(!_tcscmp(pwd,KeyMaterial))&&flag;
 
-		_tcscpy_s(ssid,DOT11_SSID_MAX_LENGTH,ucSSID);
+		_tcscpy_s(ssid,DOT11_SSID_MAX_LENGTH+1,ucSSID);	//add by mmm at2016-07-15 18:48:43 for DOT11_SSID_MAX_LENGTH+1 to resolve the long name question 
 		_tcscpy_s(pwd,NWCTL_MAX_WEPK_MATERIAL,KeyMaterial);
 		LeaveCriticalSection(&cs);
 		if (!ret)
@@ -308,14 +308,14 @@ exit:
 		CM_RESULT result=CMRE_SUCCESS;
 		MultiToUnicode((const char*)curNetwork.config.Ssid.ucSSID,CP_ACP,szConnectionName,WLAN_MAX_NAME_LENGTH);
 
-		//AllocAndGetConnectionConfig(szConnectionName,&pConfigTmp,&cbConfigTmp);
+		AllocAndGetConnectionConfig(szConnectionName,&pConfigTmp,&cbConfigTmp);
 		DeleteAllConnectionConfigs(NULL);
 		result = CmAcquireConnection(hConnection);
-		/*if (pConfigTmp)
+		if (pConfigTmp)
 		{
 			CmAddConnectionConfig(szConnectionName,pConfigTmp,cbConfigTmp);
 			LocalFree(pConfigTmp);
-		}*/
+		}
 		return result;
 	}
 	int connect(PNW_WLAN_CONFIG pWiFiConfig,LPCTSTR ssid,LPCTSTR password){
@@ -349,7 +349,7 @@ exit:
 
 			//disconnect();
 			//disconnect(szConnectionName);
-			//DeleteAllConnectionConfigs(szConnectionName);
+			DeleteAllConnectionConfigs(NULL);
 
 			CreateConnectionConfigFromXml(szConnectionName,bstrXml,&g_guid,&pConfig,&cbConfigSize);
 
@@ -369,7 +369,7 @@ exit:
 				if (dwError==0) {
 					if (memcmp(&pDetails->Type, &CM_CSP_WIFI_TYPE, sizeof(CM_CONNECTION_TYPE)) == 0) {
 						if (wcscmp(pDetails->szName,szConnectionName) == 0) {
-							AcquireConnection(hConnection);
+							result = CmAcquireConnection(hConnection);
 						}
 					}
 				}
