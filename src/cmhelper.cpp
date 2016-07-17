@@ -326,7 +326,7 @@ int ssid_2_connect_string(const char* src,LPTSTR dst,int dstlen){
 
 DWORD DeleteAllConnectionConfigs(LPTSTR name)
 {
-	CM_CONNECTION_NAME_LIST* pCmConnections;
+	CM_CONNECTION_NAME_LIST* pCmConnections=NULL;
 	DWORD dwError = ERROR_SUCCESS;
 	CM_RESULT result = CMRE_INSUFFICIENT_BUFFER;
 	DWORD dwSize = sizeof(CM_CONNECTION_NAME_LIST) * DEFAULT_CONNECTION_CONFIG_COUNT;

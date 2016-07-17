@@ -289,7 +289,7 @@ exit:
 				{
 					
 					wprintf(L"[wifi] start connect %s!!!\r\n",ssid);
-					connect(&wlist[idx].config,wlist[idx].ucSSID,pwd); 
+					connect(wlist[idx],pwd); 
 					break;
 				}
 			}
@@ -318,7 +318,7 @@ exit:
 		}
 		return result;
 	}
-	int connect(PNW_WLAN_CONFIG pWiFiConfig,LPCTSTR ssid,LPCTSTR password){
+	int connect(tag_NetWork& tag,LPCTSTR password){
 		CM_CONNECTION_DETAILS *pDetails = NULL;
 		
 		CM_CONNECTION_HANDLE hConnection = NULL;
@@ -329,36 +329,38 @@ exit:
 		DWORD cbNameSize = WLAN_MAX_NAME_LENGTH;
 		DWORD cbConfigSize = 10,dwError;
 		BSTR bstrXml=NULL;
-		
+
+		PNW_WLAN_CONFIG pWiFiConfig=&tag.config;
+		LPCTSTR ssid=tag.ucSSID;
+
 		dwError = WlanSsidToDisplayName(&pWiFiConfig->Ssid, szConnectionName, &cbNameSize);
 		BAIL_ON_WIN32_ERROR(dwError);
 
 
-		/*if (_tcscmp(pWiFiConfig->KeyMaterial,password))
-		{*/
+		if (tag.bSecurityEnabled)
+		{
 			_tcscpy_s(pWiFiConfig->KeyMaterial,NWCTL_MAX_WEPK_MATERIAL,password);
-			if (_tcslen(pWiFiConfig->KeyMaterial)>7)
-			{
-				pWiFiConfig->dwCtlFlags |= (NWCTL_BROADCAST_SSID|NWCTL_WEPK_PASSPHRASE);
-			}else{
-				pWiFiConfig->dwCtlFlags |= (NWCTL_BROADCAST_SSID);
-			}
+			pWiFiConfig->dwCtlFlags |= (NWCTL_BROADCAST_SSID|NWCTL_WEPK_PASSPHRASE);
+		}else{
+			pWiFiConfig->dwCtlFlags |= (NWCTL_BROADCAST_SSID);
+			pWiFiConfig->Privacy=DOT11_CIPHER_ALGO_NONE;
+		}
 
-			dwError=SyncProfile(pWiFiConfig, TRUE/*updateXmlDirection*/, &bstrXml);
-			BAIL_ON_WIN32_ERROR(dwError);
+		dwError=SyncProfile(pWiFiConfig, TRUE/*updateXmlDirection*/, &bstrXml);
+		BAIL_ON_WIN32_ERROR(dwError);
 
-			//disconnect();
-			//disconnect(szConnectionName);
-			DeleteAllConnectionConfigs(NULL);
+		//disconnect();
+		//disconnect(szConnectionName);
+		DeleteAllConnectionConfigs(NULL);
 
-			CreateConnectionConfigFromXml(szConnectionName,bstrXml,&g_guid,&pConfig,&cbConfigSize);
+		CreateConnectionConfigFromXml(szConnectionName,bstrXml,&g_guid,&pConfig,&cbConfigSize);
 
-			if (pConfig) {
-				
-				/*result = CmAddConnectionConfig(szConnectionName,pConfig,cbConfigSize);*/
-				updateConfig(szConnectionName,pConfig,cbConfigSize);
-				LocalFree(pConfig);
-			}
+		if (pConfig) {
+			
+			result = CmAddConnectionConfig(szConnectionName,pConfig,cbConfigSize);
+			//updateConfig(szConnectionName,pConfig,cbConfigSize);
+			LocalFree(pConfig);
+		}
 
 			//Sleep(5000);
 		//}
