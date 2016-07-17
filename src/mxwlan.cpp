@@ -376,10 +376,9 @@ exit:
 					}
 				}
 		}
-		mxwifi<void>::get_inst().notify(2);
 exit:
+		mxwifi<void>::get_inst().notify(2);
 		printf("[wifi] connect over!!!\r\n");
-		
 		return -1;
 	}
 
@@ -467,7 +466,7 @@ exit:
 		return status;
 	}
 	static void TimerCallBack(UINT uTimerID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2){
-		if (!mxwifi<void>::get_inst().getStatus() || _tcscmp(mxwifi<void>::get_inst().ucSSID,mxwifi<void>::get_inst().curNetwork.ucSSID))
+		if (!mxwifi<void>::get_inst().getStatus()/* || _tcscmp(mxwifi<void>::get_inst().ucSSID,mxwifi<void>::get_inst().curNetwork.ucSSID)*/)
 		{
 			printf("mxwifi<void>::get_inst().getStatus():%d\r\n",mxwifi<void>::get_inst().getStatus());
 			HWND hwnd_setting = FindWindow(NULL,_T("Front_Setting_UI"));
