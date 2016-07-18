@@ -442,11 +442,11 @@ exit:
 	}
 	
 	int IsExist(LPSTR name){
-		TCHAR buf[200];
-		MultiToUnicode(name,65001,buf,200);
+		/*TCHAR buf[200];
+		MultiToUnicode(name,65001,buf,200);*/
 		for (DWORD i=0;i<listsize;i++)
 		{
-			if(!_tcscmp(wlist[i].ucSSID,buf)){
+			if(!strncmp((const char*)wlist[i].config.Ssid.ucSSID,name,wlist[i].config.Ssid.uSSIDLength)){
 				return 1;
 			}
 		}
